@@ -1,0 +1,30 @@
+{
+    "name": "@azleur/mat3",
+    "version": "0.0.0",
+    "author": "azleur",
+    "license": "ISC",
+    "repository": {
+        "type": "git",
+        "url": "https://github.com/Azleur/mat3.git"
+    },
+    "homepage": "https://github.com/Azleur/mat3",
+    "main": "dist/index.js",
+    "types": "dist/index.d.ts",
+    "publishConfig": {
+        "access": "public"
+    },
+    "scripts": {
+        "test": "jest",
+        "build": "rm -rf dist && tsc && uglifyjs dist/index.js --compress --output dist/index.js"
+    },
+    "devDependencies": {
+        "@types/jest": "^26.0.3",
+        "jest": "^26.1.0",
+        "ts-jest": "^26.1.1",
+        "typescript": "^3.9.6",
+        "uglify-js": "^3.10.0"
+    },
+    "dependencies": {
+        "@azleur/vec3": "^0.1.1"
+    }
+}
