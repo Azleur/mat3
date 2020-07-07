@@ -302,3 +302,50 @@ test("AffineRotationMatrix(number) returns the (ccw) rotation matrix for an angl
     AssertVec(r30.TimesVec(RightVec), new Vec3(Math.sqrt(3) / 2,            1 / 2, 0));
     AssertVec(r30.TimesVec(UpVec   ), new Vec3(         - 1 / 2, Math.sqrt(3) / 2, 0));
 });
+
+// test("TEMPORARY sanity check for inversion helpers", () => {
+//     const Values = () => [[1, 2, 3], [4, 5, 6], [7, 8, 9]];
+
+//     const val1 = Values();
+//     swapRows(val1, 0, 1);
+//     expect(val1).toEqual([[4, 5, 6], [1, 2, 3], [7, 8, 9]]);
+
+//     const val2 = Values();
+//     scaleRow(val2, 2, 3);
+//     expect(val2).toEqual([[1, 2, 3], [4, 5, 6], [21, 24, 27]]);
+
+//     const val3 = Values();
+//     combineRows(val3, 0, 2, 1);
+//     expect(val3).toEqual([[1, 2, 3], [6, 9, 12], [7, 8, 9]]);
+// });
+
+test("Mat3.Clone() creates a deep copy of this", () => {
+    const mat1 = new Mat3([[1, 2, 3], [4, 5, 6], [7, 8, 9]]);
+    const mat2 = mat1.Clone();
+    mat1.values[0][1] = 10;
+    mat2.values[1][2] = 11;
+
+    expect(mat1).toEqual(new Mat3([[1, 10, 3], [4, 5,  6], [7, 8, 9]]));
+    expect(mat2).toEqual(new Mat3([[1,  2, 3], [4, 5, 11], [7, 8, 9]]));
+});
+
+test("Mat3.Invert() calculates the inverse matrix, without modifying the original", () => {
+    const mat1 = new Mat3([
+        [8, 2, 3],
+        [6, 8, 5],
+        [3, 9, 9]
+    ]);
+    const mat2 = new Mat3([
+        [ 0.118421,  0.039474, -0.061404],
+        [-0.171053,  0.276316, -0.096491],
+        [ 0.131579, -0.289474,  0.228070]
+    ]);
+
+    AssertEqual(Mat3.Id.Invert(), Mat3.Id);
+
+    AssertEqual(mat1.Invert(), mat2);
+    AssertEqual(mat2.Invert(), mat1);
+
+    AssertEqual(mat1.TimesMat(mat2), Mat3.Id);
+    AssertEqual(mat2.TimesMat(mat1), Mat3.Id);
+});

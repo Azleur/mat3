@@ -1,4 +1,5 @@
-import { Vec3 } from '@azleur/vec3';
+import { Vec3 } from "@azleur/vec3";
+import { IsEpsilon } from "@azleur/math-util";
 
 const zeroValues = () => [[0, 0, 0], [0, 0, 0], [0, 0, 0]];
 
@@ -19,6 +20,13 @@ export class Mat3 {
     static get Zero() { return new Mat3([[0, 0, 0], [0, 0, 0], [0, 0, 0]]); }
     static get Id  () { return new Mat3([[1, 0, 0], [0, 1, 0], [0, 0, 1]]); }
     static get Ones() { return new Mat3([[1, 1, 1], [1, 1, 1], [1, 1, 1]]); }
+
+    /** Return a deep copy of this matrix. */
+    Clone(): Mat3 {
+        const [r1, r2, r3] = this.values;
+        const newValues = [[...r1], [...r2], [...r3]];
+        return new Mat3(newValues);
+    }
 
     /** Return a transposed copy of this matrix. */
     Transpose(): Mat3 {
@@ -124,6 +132,44 @@ export class Mat3 {
 
     //     return 0;
     // }
+
+    /** Calculates the inverse of this matrix, if it exists. */
+    Invert(): Mat3 {
+        const matrix : number[][] = this.Clone().values;
+        const inverse: number[][] = Mat3.Id.values;
+
+        for (let i = 0; i < 3; i++) { // For each column...
+
+            // Find first non-zero row below the diagonal (including diagonal), and swap it into the diagonal.
+            let di;
+            for (di = 0; i + di < 3; di++) {
+                const entry = matrix[i + di][i];
+                if (!IsEpsilon(entry)) break; // entry != 0
+            }
+            // TODO: THROW IF di == 3?
+            if (di > 0) {
+                swapRows(matrix , i, i + di);
+                swapRows(inverse, i, i + di);
+            }
+
+            // Reduce to 1 in the diagonal.
+            const scale = 1 / matrix[i][i];
+            scaleRow(matrix , i, scale);
+            scaleRow(inverse, i, scale);
+
+            // Remove column in all other rows
+            for (let j = 0; j < 3; j++) {
+                if(i == j) continue;
+                const leadingValue = matrix[j][i];
+                if (!IsEpsilon(leadingValue)) { // If value != 0
+                    combineRows(matrix , i, -leadingValue, j);
+                    combineRows(inverse, i, -leadingValue, j);
+                }
+            }
+        }
+
+        return new Mat3(inverse);
+    }
 }
 
 /**
@@ -137,3 +183,20 @@ export const AffineRotationMatrix = (theta: number): Mat3 => {
     const s = Math.sin(theta);
     return new Mat3([[c, -s, 0], [s, c, 0], [0, 0, 1]]);
 };
+
+// ==== MATRIX INVERSION HELPERS ==== //
+
+/** In-place row swapping. */
+const swapRows = (values: number[][], i: number, j: number): void => {
+    [values[i], values[j]] = [values[j], values[i]];
+};
+
+/** In-place row scaling. */
+const scaleRow = (values: number[][], i: number, k: number): void => {
+    values[i] = values[i].map(a => k * a);
+}
+
+/** In-place row linear combination. */
+const combineRows = (values: number[][], from: number, scale: number, into: number): void => {
+    values[into] = values[into].map((value, idx) => value + scale * values[from][idx]);
+}
