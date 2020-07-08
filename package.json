@@ -26,6 +26,7 @@
     },
     "dependencies": {
         "@azleur/math-util": "^0.1.1",
+        "@azleur/vec2": "^0.2.1",
         "@azleur/vec3": "^0.1.1"
     }
 }

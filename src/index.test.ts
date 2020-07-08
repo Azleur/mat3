@@ -1,5 +1,7 @@
+import { Vec2 } from '@azleur/vec2';
 import { Vec3 } from '@azleur/vec3';
-import { Mat3, AffineRotationMatrix } from '.';
+
+import { Mat3, Rotation2D, Translation, Scaling, BasisChange } from '.';
 
 const AssertEqual = (observed: Mat3, expected: Mat3): void => {
     for (let i = 0; i < 3; i++) {
@@ -20,7 +22,7 @@ const AssertVec = (observed: Vec3, expected: Vec3): void => {
         const exp = expected.values[i];
         const err = Math.abs(obs - exp);
         if (err > 0.0001) {
-            throw new Error(`MISMATCH [${i}] observed: ${obs}, expected: ${exp}.`);
+            throw new Error(`MISMATCH [${i}] observed: ${obs}, expected: ${exp}.\nobserved: ${observed.values}\nexpected: ${expected.values}`);
         }
     }
 };
@@ -253,14 +255,14 @@ test("Mat3.Determinant() returns the determinant", () => {
     expect(mat3     .Determinant()).toBeCloseTo(156);
 });
 
-test("AffineRotationMatrix(number) returns the (ccw) rotation matrix for an angle, in radians", () => {
+test("Rotation2D(number) returns the (ccw) rotation matrix for an angle, in radians", () => {
     const Pi = Math.PI;
 
-    const r0   = AffineRotationMatrix(0.0 * Pi);
-    const r90  = AffineRotationMatrix(0.5 * Pi);
-    const r180 = AffineRotationMatrix(1.0 * Pi);
-    const r270 = AffineRotationMatrix(1.5 * Pi);
-    const r30  = AffineRotationMatrix(Pi / 6);
+    const r0   = Rotation2D(0.0 * Pi);
+    const r90  = Rotation2D(0.5 * Pi);
+    const r180 = Rotation2D(1.0 * Pi);
+    const r270 = Rotation2D(1.5 * Pi);
+    const r30  = Rotation2D(Pi / 6);
 
     const RightPos = new Vec3(+1,  0, 1);
     const LeftPos  = new Vec3(-1,  0, 1);
@@ -348,4 +350,110 @@ test("Mat3.Invert() calculates the inverse matrix, without modifying the origina
 
     AssertEqual(mat1.TimesMat(mat2), Mat3.Id);
     AssertEqual(mat2.TimesMat(mat1), Mat3.Id);
+});
+
+test("Translation(displacement) returns the 2D affine matrix for a translation with the given displacement", () => {
+    const mat1 = Translation(Vec2.Zero);
+    const mat2 = Translation(Vec2.X);
+    const mat3 = Translation(Vec2.Y);
+    const mat4 = Translation(new Vec2(-2, 4));
+
+    AssertEqual(mat1, Mat3.Id); // Translation by zero does nothing.
+
+    // mat2 moves points by (+1, 0).
+    AssertVec(mat2.TimesVec(new Vec3(0,  0, 1)), new Vec3(1,  0, 1));
+    AssertVec(mat2.TimesVec(new Vec3(1,  0, 1)), new Vec3(2,  0, 1));
+    AssertVec(mat2.TimesVec(new Vec3(0,  1, 1)), new Vec3(1,  1, 1));
+    AssertVec(mat2.TimesVec(new Vec3(3, -6, 1)), new Vec3(4, -6, 1));
+
+    // mat2 does not move vectors.
+    AssertVec(mat2.TimesVec(new Vec3(0,  0, 0)), new Vec3(0,  0, 0));
+    AssertVec(mat2.TimesVec(new Vec3(1,  0, 0)), new Vec3(1,  0, 0));
+    AssertVec(mat2.TimesVec(new Vec3(0,  1, 0)), new Vec3(0,  1, 0));
+    AssertVec(mat2.TimesVec(new Vec3(3, -6, 0)), new Vec3(3, -6, 0));
+
+    // mat3 moves points by (0, +1).
+    AssertVec(mat3.TimesVec(new Vec3(0,  0, 1)), new Vec3(0,  1, 1));
+    AssertVec(mat3.TimesVec(new Vec3(1,  0, 1)), new Vec3(1,  1, 1));
+    AssertVec(mat3.TimesVec(new Vec3(0,  1, 1)), new Vec3(0,  2, 1));
+    AssertVec(mat3.TimesVec(new Vec3(3, -6, 1)), new Vec3(3, -5, 1));
+
+    // mat3 does not move vectors.
+    AssertVec(mat3.TimesVec(new Vec3(0,  0, 0)), new Vec3(0,  0, 0));
+    AssertVec(mat3.TimesVec(new Vec3(1,  0, 0)), new Vec3(1,  0, 0));
+    AssertVec(mat3.TimesVec(new Vec3(0,  1, 0)), new Vec3(0,  1, 0));
+    AssertVec(mat3.TimesVec(new Vec3(3, -6, 0)), new Vec3(3, -6, 0));
+
+    // mat4 moves points by (-2, +4).
+    AssertVec(mat4.TimesVec(new Vec3(0,  0, 1)), new Vec3(-2,  4, 1));
+    AssertVec(mat4.TimesVec(new Vec3(1,  0, 1)), new Vec3(-1,  4, 1));
+    AssertVec(mat4.TimesVec(new Vec3(0,  1, 1)), new Vec3(-2,  5, 1));
+    AssertVec(mat4.TimesVec(new Vec3(3, -6, 1)), new Vec3( 1, -2, 1));
+
+    // mat4 does not move vectors.
+    AssertVec(mat4.TimesVec(new Vec3(0,  0, 0)), new Vec3(0,  0, 0));
+    AssertVec(mat4.TimesVec(new Vec3(1,  0, 0)), new Vec3(1,  0, 0));
+    AssertVec(mat4.TimesVec(new Vec3(0,  1, 0)), new Vec3(0,  1, 0));
+    AssertVec(mat4.TimesVec(new Vec3(3, -6, 0)), new Vec3(3, -6, 0));
+});
+
+test("Scaling(factor) returns the 2D affine matrix for axis-aligned scaling", () => {
+    const mat1 = Scaling(Vec2.One);
+    const mat2 = Scaling(Vec2.Zero);
+    const mat3 = Scaling(new Vec2(2, -3));
+
+    // Scaling by (1, 1) keeps points stable.
+    AssertVec(mat1.TimesVec(new Vec3(0,  0, 1)), new Vec3(0,  0, 1));
+    AssertVec(mat1.TimesVec(new Vec3(1,  0, 1)), new Vec3(1,  0, 1));
+    AssertVec(mat1.TimesVec(new Vec3(0,  1, 1)), new Vec3(0,  1, 1));
+    AssertVec(mat1.TimesVec(new Vec3(3, -6, 1)), new Vec3(3, -6, 1));
+
+    // Scaling by (1, 1) keeps vectors stable.
+    AssertVec(mat1.TimesVec(new Vec3(0,  0, 0)), new Vec3(0,  0, 0));
+    AssertVec(mat1.TimesVec(new Vec3(1,  0, 0)), new Vec3(1,  0, 0));
+    AssertVec(mat1.TimesVec(new Vec3(0,  1, 0)), new Vec3(0,  1, 0));
+    AssertVec(mat1.TimesVec(new Vec3(3, -6, 0)), new Vec3(3, -6, 0));
+
+    // Scaling by (0, 0) sends points to the zero point.
+    AssertVec(mat2.TimesVec(new Vec3(0,  0, 1)), new Vec3(0, 0, 1));
+    AssertVec(mat2.TimesVec(new Vec3(1,  0, 1)), new Vec3(0, 0, 1));
+    AssertVec(mat2.TimesVec(new Vec3(0,  1, 1)), new Vec3(0, 0, 1));
+    AssertVec(mat2.TimesVec(new Vec3(3, -6, 1)), new Vec3(0, 0, 1));
+
+    // Scaling by (0, 0) sends vectors to the zero vector.
+    AssertVec(mat2.TimesVec(new Vec3(0,  0, 0)), new Vec3(0, 0, 0));
+    AssertVec(mat2.TimesVec(new Vec3(1,  0, 0)), new Vec3(0, 0, 0));
+    AssertVec(mat2.TimesVec(new Vec3(0,  1, 0)), new Vec3(0, 0, 0));
+    AssertVec(mat2.TimesVec(new Vec3(3, -6, 0)), new Vec3(0, 0, 0));
+
+    // Scaling by (2, -3) sends points to their expanded position.
+    AssertVec(mat3.TimesVec(new Vec3(0,  0, 1)), new Vec3(0,  0, 1));
+    AssertVec(mat3.TimesVec(new Vec3(1,  0, 1)), new Vec3(2,  0, 1));
+    AssertVec(mat3.TimesVec(new Vec3(0,  1, 1)), new Vec3(0, -3, 1));
+    AssertVec(mat3.TimesVec(new Vec3(3, -6, 1)), new Vec3(6, 18, 1));
+
+    // Scaling by (1, 1) sends vectors to their expanded version.
+    AssertVec(mat3.TimesVec(new Vec3(0,  0, 0)), new Vec3(0,  0, 0));
+    AssertVec(mat3.TimesVec(new Vec3(1,  0, 0)), new Vec3(2,  0, 0));
+    AssertVec(mat3.TimesVec(new Vec3(0,  1, 0)), new Vec3(0, -3, 0));
+    AssertVec(mat3.TimesVec(new Vec3(3, -6, 0)), new Vec3(6, 18, 0));
+})
+
+test("BasisChange(c, b1, b2) returns the 2D affine matrix for converting coordinates from center c and basis (b1, b2) to Cartesian", () => {
+    const mat1 = BasisChange(Vec2.Zero, Vec2.X, Vec2.Y);
+    const mat2 = BasisChange(new Vec2(-2, 3), new Vec2(1, 1), new Vec2(2, -1));
+
+    AssertEqual(mat1, Mat3.Id); // Translation by zero does nothing.
+
+    // mat2 moves points by (+1, 0).
+    AssertVec(mat2.TimesVec(new Vec3(0,  0, 1)), new Vec3( -2,  3, 1));
+    AssertVec(mat2.TimesVec(new Vec3(1,  0, 1)), new Vec3( -1,  4, 1));
+    AssertVec(mat2.TimesVec(new Vec3(0,  1, 1)), new Vec3(  0,  2, 1));
+    AssertVec(mat2.TimesVec(new Vec3(3, -6, 1)), new Vec3(-11, 12, 1));
+
+    // mat2 does not move vectors.
+    AssertVec(mat2.TimesVec(new Vec3(0,  0, 0)), new Vec3( 0,  0, 0));
+    AssertVec(mat2.TimesVec(new Vec3(1,  0, 0)), new Vec3( 1,  1, 0));
+    AssertVec(mat2.TimesVec(new Vec3(0,  1, 0)), new Vec3( 2, -1, 0));
+    AssertVec(mat2.TimesVec(new Vec3(3, -6, 0)), new Vec3(-9,  9, 0));
 });

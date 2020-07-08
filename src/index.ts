@@ -1,3 +1,4 @@
+import { Vec2 } from "@azleur/vec2";
 import { Vec3 } from "@azleur/vec3";
 import { IsEpsilon } from "@azleur/math-util";
 
@@ -93,7 +94,7 @@ export class Mat3 {
 
     /** Return a copy of the matrix * vector product (this * vec). */
     TimesVec(vec: Vec3): Vec3 {
-        const values: number[] = [0, 0];
+        const values: number[] = [0, 0, 0];
         for (let i = 0; i < 3; i++) {
             for (let j = 0; j < 3; j++) {
                 values[i] += this.values[i][j] * vec.values[j];
@@ -178,13 +179,38 @@ export class Mat3 {
  * @param theta Angle, in radians.
  * @returns Rotation matrix.
  */
-export const AffineRotationMatrix = (theta: number): Mat3 => {
+export const Rotation2D = (theta: number): Mat3 => {
     const c = Math.cos(theta);
     const s = Math.sin(theta);
-    return new Mat3([[c, -s, 0], [s, c, 0], [0, 0, 1]]);
+    return new Mat3([
+        [c, -s, 0],
+        [s,  c, 0],
+        [0,  0, 1]
+    ]);
 };
 
-// ==== MATRIX INVERSION HELPERS ==== //
+/** Calculate the 2D affine translation matrix (projective representation) for a given displacement. */
+export const Translation = (displacement: Vec2): Mat3 => new Mat3([
+    [1, 0, displacement.x],
+    [0, 1, displacement.y],
+    [0, 0,              1]
+]);
+
+/** Calculate the 2D affine axis-aligned scaling matrix (projective representation) for a given scaling vector. */
+export const Scaling = (factor: Vec2): Mat3 => new Mat3([
+    [factor.x,        0, 0],
+    [       0, factor.y, 0],
+    [       0,        0, 1]
+]);
+
+/** Calculate the 2D affine matrix corresponding to "input vector is coordinates from center c, with vector basis (b1, b2)". */
+export const BasisChange = (c: Vec2, b1: Vec2, b2: Vec2): Mat3  => new Mat3([
+    [b1.x, b2.x, c.x],
+    [b1.y, b2.y, c.y],
+    [   0,    0,   1]
+]);
+
+// ================ MATRIX INVERSION HELPERS ================ //
 
 /** In-place row swapping. */
 const swapRows = (values: number[][], i: number, j: number): void => {
